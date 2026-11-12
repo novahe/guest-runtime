@@ -2,6 +2,7 @@
 #
 # This repo builds guest runtime artifacts:
 #   flatten-ctl               OCI/dir -> deterministic EROFS builder
+#   runtime-repack            binary swap + repack for runtime bundles
 #   sandbox-runtime.bundle    virtio-pmem/DAX guest runtime image
 #   native-deps/bin/*         vmlinux, envd
 #
@@ -12,7 +13,7 @@
 
 SHELL := /bin/bash
 
-.PHONY: all build flatten-ctl sandbox-init sandbox-runtime native-deps envd vmlinux test vet test-e2e-scripts release-runtime release-vmlinux test-release clean help
+.PHONY: all build flatten-ctl runtime-repack release-runtime-repack sandbox-init sandbox-runtime native-deps envd vmlinux test vet test-e2e-scripts release-runtime release-vmlinux test-release clean help
 
 # ---------------------------------------------------------------------------
 # Architecture selection (identical block across all kuasar-sandbox repos)
@@ -73,6 +74,15 @@ flatten-ctl:
 	@mkdir -p "$(BINDIR)"
 	GOOS=linux GOARCH=$(GO_ARCH) CGO_ENABLED=0 $(GO) build $(GO_BUILD_FLAGS) -o "$(BINDIR)/flatten-ctl" ./cmd/flatten-ctl
 	$(call link_bin,flatten-ctl)
+
+runtime-repack:
+	@mkdir -p "$(BINDIR)"
+	GOOS=linux GOARCH=$(GO_ARCH) CGO_ENABLED=0 $(GO) build $(GO_BUILD_FLAGS) -ldflags '-s -w' -o "$(BINDIR)/runtime-repack" ./cmd/runtime-repack
+	$(call link_bin,runtime-repack)
+
+# Both architectures + the guest-runtime/<arch>/ tarball, via the script.
+release-runtime-repack:
+	bash scripts/release-runtime-repack.sh
 
 native-deps:
 	$(MAKE) -C native-deps build
